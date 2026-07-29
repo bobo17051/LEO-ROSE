@@ -207,10 +207,28 @@
             position: relative;
         }
 
-        .logout-top-btn {
+        .header-top-right {
             position: absolute;
             top: 15px;
             right: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .live-datetime {
+            font-size: 11px;
+            color: #00b37e;
+            font-weight: bold;
+            font-family: monospace;
+            background-color: #18181b;
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid #323238;
+        }
+
+        .logout-top-btn {
             background-color: #f75a68;
             color: white;
             border: none;
@@ -385,6 +403,7 @@
             width: 100%;
             box-sizing: border-box;
             display: none;
+            margin-bottom: 30px;
         }
 
         .admin-panel h3 {
@@ -460,6 +479,34 @@
 
         .save-btn:hover {
             background-color: #e0963d;
+        }
+
+        /* CSS cho phần Lịch sử đăng ký tài khoản khách hàng */
+        .history-section {
+            margin-top: 25px;
+            border-top: 1px solid #323238;
+            padding-top: 15px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .history-table th, .history-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #323238;
+        }
+
+        .history-table th {
+            color: #00b37e;
+            background-color: #18181b;
+        }
+
+        .history-table tr:hover {
+            background-color: #18181b;
         }
     </style>
 </head>
@@ -561,7 +608,12 @@
 
         <div class="container">
             <div class="menu-section">
-                <button class="logout-top-btn" onclick="handleLogout()">Đăng Xuất</button>
+                <!-- Khu vực hiển thị ngày tháng năm/thời gian và nút đăng xuất -->
+                <div class="header-top-right">
+                    <div id="live-datetime" class="live-datetime">--/--/---- --:--:--</div>
+                    <button class="logout-top-btn" onclick="handleLogout()">Đăng Xuất</button>
+                </div>
+                
                 <div class="menu-title">📌 MỤC LỤC</div>
                 <div class="main-menu-buttons">
                     <button class="main-btn active" id="btn-cancau" onclick="switchCategory('cancau')">Cần Câu</button>
@@ -626,14 +678,38 @@
 
                 <button class="add-mat-btn" onclick="addMaterialRow()">+ Thêm ô nguyên liệu</button>
                 <button class="save-btn" onclick="saveData()">💾 Lưu thay đổi</button>
+
+                <!-- BẢNG LỊCH SỬ KHÁCH HÀNG ĐĂNG KÝ -->
+                <div class="history-section">
+                    <h4 style="color: #fba94c; margin-top: 0; margin-bottom: 10px;">📋 Lịch Sử Khách Hàng Đăng Ký Tài Khoản</h4>
+                    <div style="max-height: 200px; overflow-y: auto;">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Tên Đăng Nhập</th>
+                                    <th>Gmail</th>
+                                    <th>Mật Khẩu</th>
+                                    <th>Thời Gian Đăng Ký</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <!-- Dữ liệu tự động điền vào đây -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let users = JSON.parse(localStorage.getItem('vrp_users')) || {
-            "leorose1705": { pass: "30122003", email: "cocobobohouse1705@gmail.com" }
-        };
+       let users = JSON.parse(localStorage.getItem('vrp_users')) || {
+    "leorose1705": { pass: "30122003", email: "cocobobohouse1705@gmail.com", time: "Mặc định" },
+    
+    // Thêm tài khoản khách hàng mới vào đây:
+    "ani": { pass: "ptien246", email: "letanfuy9102007@gmail.com", time: "Mặc định" },
+    "Thinhrose": { pass: "23032008Thinh", email: "phamthanhthinh2303@gmail.com", time: "Mặc định" }
+};
 
         let db = JSON.parse(localStorage.getItem('vrp_db'));
         if (!db) {
@@ -664,7 +740,20 @@
                 document.getElementById('remember-user').checked = true;
             }
             setupEnterKeyListeners();
+            startLiveClock(); // Chạy đồng hồ thời gian thực
         };
+
+        // Hàm cập nhật đồng hồ ngày tháng năm và giờ liên tục
+        function startLiveClock() {
+            function updateClock() {
+                let now = new Date();
+                let timeString = now.toLocaleTimeString('vi-VN');
+                let dateString = now.toLocaleDateString('vi-VN');
+                document.getElementById('live-datetime').innerText = dateString + ' - ' + timeString;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
 
         function setupEnterKeyListeners() {
             ['login-user', 'login-pass'].forEach(id => {
@@ -765,7 +854,8 @@
                 return;
             }
 
-            users[user] = { pass: pass, email: email };
+            let now = new Date().toLocaleString('vi-VN');
+            users[user] = { pass: pass, email: email, time: now };
             localStorage.setItem('vrp_users', JSON.stringify(users));
 
             alert("Đăng ký thành công! Hãy đăng nhập bằng tài khoản mới.");
@@ -862,6 +952,7 @@
                 
                 if(user === "leorose1705") {
                     document.getElementById('admin-panel').style.display = 'block';
+                    renderRegistrationHistory();
                 } else {
                     document.getElementById('admin-panel').style.display = 'none';
                 }
@@ -870,6 +961,23 @@
             } else {
                 errEl.style.display = 'block';
             }
+        }
+
+        function renderRegistrationHistory() {
+            let tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+            
+            Object.keys(users).forEach(username => {
+                let info = users[username];
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: #00b37e; font-weight: bold;">${username}</td>
+                    <td>${info.email || 'Không có'}</td>
+                    <td style="color: #fba94c; font-family: monospace;">${info.pass || ''}</td>
+                    <td style="color: #a8a8b3;">${info.time || 'Cập nhật trước đó'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function handleLogout() {
@@ -934,17 +1042,23 @@
         function renderDisplayMaterials(mats) {
             let listHTML = '';
             if(!mats || mats.length === 0) {
-                listHTML = '<li class="material-item"><span>Không có nguyên liệu</span><span style="font-weight:bold;">x0</span></li>';
+                listHTML = '<li class="material-item"><span>Không có nguyên liệu</span><span></span></li>';
             } else {
                 mats.forEach(item => {
                     let imgTag = item.img ? `<img src="${item.img}" class="mat-thumb" style="display:inline-block;">` : '';
+                    
+                    // Xử lý hiển thị phần số lượng: Nếu có qty (kể cả số 0) thì hiện x[qty], nếu không có (chỉ nhập chữ) thì bỏ trống phần x
+                    let qtyDisplay = (item.qty !== undefined && item.qty !== null && String(item.qty).trim() !== "") 
+                        ? `<span style="font-weight:bold;">x${item.qty}</span>` 
+                        : `<span></span>`;
+
                     listHTML += `
                         <li class="material-item">
                             <div class="mat-info">
                                 ${imgTag}
                                 <span>${item.name}</span>
                             </div>
-                            <span style="font-weight:bold;">x${item.qty}</span>
+                            ${qtyDisplay}
                         </li>`;
                 });
             }
@@ -958,8 +1072,14 @@
             mats.forEach((item) => {
                 let row = document.createElement('div');
                 row.className = 'mat-edit-row';
+                
+                // Hiển thị giá trị ô input chỉnh sửa: Nếu có qty thì hiển thị "Tên, Số lượng", nếu không thì chỉ hiện "Tên"
+                let displayVal = (item.qty !== undefined && item.qty !== null && String(item.qty).trim() !== "") 
+                    ? `${item.name}, ${item.qty}` 
+                    : item.name;
+
                 row.innerHTML = `
-                    <input type="text" placeholder="Tên, Số lượng (VD: Gỗ, 5)" value="${item.name}, ${item.qty}" class="mat-input-val">
+                    <input type="text" placeholder="Tên, Số lượng (VD: Gỗ, 5 hoặc chỉ nhập Chữ)" value="${displayVal}" class="mat-input-val">
                     <input type="file" accept="image/*" class="mat-input-file">
                     <button class="remove-mat-btn" onclick="removeMaterialRow(this)">Xóa</button>
                 `;
@@ -975,7 +1095,7 @@
             let row = document.createElement('div');
             row.className = 'mat-edit-row';
             row.innerHTML = `
-                <input type="text" placeholder="Tên, Số lượng (VD: Sắt, 2)" value="Nguyên liệu mới, 1" class="mat-input-val">
+                <input type="text" placeholder="Tên, Số lượng (VD: Sắt, 2 hoặc chỉ nhập Chữ)" value="Nguyên liệu mới, 1" class="mat-input-val">
                 <input type="file" accept="image/*" class="mat-input-file">
                 <button class="remove-mat-btn" onclick="removeMaterialRow(this)">Xóa</button>
             `;
@@ -1008,7 +1128,9 @@
                 let valText = row.querySelector('.mat-input-val').value;
                 let parts = valText.split(',');
                 let name = parts[0] ? parts[0].trim() : 'Nguyên liệu';
-                let qty = parts[1] ? parts[1].trim() : '1';
+                
+                // Kiểm tra xem người dùng có nhập dấu phẩy và số lượng hay không
+                let qty = parts.length > 1 ? parts[1].trim() : undefined;
                 
                 let fileInput = row.querySelector('.mat-input-file');
                 let existingImg = (db[key].materials[index] && db[key].materials[index].img) ? db[key].materials[index].img : '';
